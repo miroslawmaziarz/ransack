@@ -23,7 +23,14 @@ module Ransack
     def visit_Ransack_Nodes_Sort(object)
       if object.valid?
         if object.attr.is_a?(Arel::Attributes::Attribute)
-          object.attr.send(object.dir)
+          if object.other_rules.present?
+            {
+              sort: object,
+              node: object.attr.send(object.dir),
+            }
+          else
+            object.attr.send(object.dir)
+          end
         else
           ordered(object)
         end

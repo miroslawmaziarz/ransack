@@ -55,16 +55,13 @@ module Ransack
             viz.accept(search.sorts).each do |scope_or_sort|
               if scope_or_sort.is_a?(Symbol)
                 relation = relation.send(scope_or_sort)
+              elsif scope_or_sort.is_a?(Hash)
+                # allow to add NULLS FIRST for example
+                # supports only single column sort by
+                raise MultiColumnSortError.new if viz.accept(search.sorts).size > 1
+                relation = relation.order("#{scope_or_sort[:node].to_sql} #{scope_or_sort[:sort].other_rules}")
               else
-                if scope_or_sort.try(:other_rules)&.present?
-                  # allow to add NULLS FIRST for example
-                  # supports only single column sort by
-                  raise MultiColumnSortError.new if viz.accept(search.sorts).size > 1
-                  order_phrase = "#{order_phrase.last.to_sql} #{search.sorts.last.other_rules}"
-                  relation = relation.order(order_phrase)
-                else
-                  relation = relation.order(scope_or_sort)
-                end
+                relation = relation.order(scope_or_sort)
               end
             end
           end
