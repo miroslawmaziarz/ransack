@@ -6,6 +6,7 @@ module Ransack
   module Adapters
     module ActiveRecord
       class Context < ::Ransack::Context
+        MultiColumnSortError = Class.new(StandardError)
 
         # Because the AR::Associations namespace is insane
         if defined? ::ActiveRecord::Associations::JoinDependency
@@ -55,7 +56,15 @@ module Ransack
               if scope_or_sort.is_a?(Symbol)
                 relation = relation.send(scope_or_sort)
               else
-                relation = relation.order(scope_or_sort)
+                if scope_or_sort.try(:other_rules)&.present?
+                  # allow to add NULLS FIRST for example
+                  # supports only single column sort by
+                  raise MultiColumnSortError.new if viz.accept(search.sorts).size > 1
+                  order_phrase = "#{order_phrase.last.to_sql} #{search.sorts.last.other_rules}"
+                  relation = relation.order(order_phrase)
+                else
+                  relation = relation.order(scope_or_sort)
+                end
               end
             end
           end
